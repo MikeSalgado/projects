@@ -1,0 +1,560 @@
+
+<html>
+<head>
+<title>JS Final Project</title>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+<script type="text/javascript" src="https://static.codehs.com/gulp/90cbccae070ebb78348e32eec045731e06fb16eb/chs-js-lib/chs.js"></script>
+
+
+<style>
+canvas {
+    border: 1px solid black;
+    display: inline-block;
+    vertical-align: top;
+}
+
+pre {
+    border: 1px solid black;
+    display: inline-block;
+    width: 400px;
+    height: 500px;
+    background-color: #F5F5F5;
+}
+</style>
+
+</head>
+
+<body>
+<h1>JS Final Project</h1>
+
+
+
+<canvas
+width="400"
+height="500"
+class="editor-canvas"></canvas>
+<pre id="console"></pre>
+
+<script>
+window.onload = function() {
+
+    // Player Circles
+var player1 = new Circle(20);
+player1.setColor(new Color(100, 100, 100));
+player1.setPosition(getWidth()/2 - 50, getHeight()/2 + 50);
+
+var player2 = new Circle(20);
+player2.setColor(new Color(100, 100, 100));
+player2.setPosition(getWidth()/2 + 50, getHeight()/2 - 50);
+
+// Player Health
+var p1Health = 100;
+var p1topLine = new Line(286, 453, 394, 453);
+var p1leftLine = new Line(286, 453, 286, 468);
+var p1rightLine = new Line(394, 453, 394, 468);
+var p1bottomLine = new Line(286, 468, 394, 468);
+var p1HealthBar = new Line(290, 460, p1Health + 290, 460);
+p1HealthBar.setLineWidth(10);
+p1HealthBar.setColor(Color.red);
+var p1Damage = 2;
+var p2Damage = 2;
+
+var p2Health = 100;
+var p2topLine = new Line(10,15, 118, 15);
+var p2leftLine = new Line(10, 15, 10, 30);
+var p2rightLine = new Line(118, 15, 118, 30);
+var p2bottomLine = new Line(10,30, 118, 30);
+var p2HealthBar = new Line(14, 22, p2Health, 22);
+p2HealthBar.setLineWidth(10);
+p2HealthBar.setColor(Color.red);
+
+// Player Speed
+var p1dx = 0;
+var p1dy = 0;
+var p2dx = 0;
+var p2dy = 0;
+var p1Speed = 0.5;
+var p2Speed = 0.5;
+
+// Start Button
+var startButton = new Rectangle(100, 25);
+startButton.setPosition(getWidth()/2 - 50, getHeight()/2 - 12);
+var startText = new Text("START", "15pt Arial");
+startText.setColor(Color.white);
+startText.setPosition(getWidth()/2 - 30, getHeight()/2 + 9);
+
+// Game Status
+var gameStart = false;
+var gameOver = false;
+var gameSpeed = 120;
+
+// Controls
+var rightPressed = false;
+var leftPressed = false;
+var upPressed = false;
+var downPressed = false;
+var pPressed = false;
+
+var dPressed = false;
+var aPressed = false;
+var wPressed = false;
+var sPressed = false;
+var spacePressed = false;
+
+// Player Projectiles
+var p1Cooldown = false;
+var p2Cooldown = false;
+var p1Shot = new Circle(15);
+p1Shot.setColor(new Color(255, 128, 0));
+var p2Shot = new Circle(15);
+p2Shot.setColor(new Color(51, 153, 255));
+var p1shotdy = -20;
+var p2shotdy = 20;
+var shotCount = 0;
+
+// Power-Ups //
+
+// Health Boost
+var healthBoost = new Circle(10);
+healthBoost.setColor(Color.red);
+
+
+// Speed Boost
+var speedBoost = new Circle(10);
+speedBoost.setColor(Color.cyan);
+
+// Slow Down
+var slowDown = new Circle(10);
+slowDown.setColor(Color.gray);
+
+// Damage Boost
+var damageBoost = new Circle(10);
+damageBoost.setColor(Color.purple);
+
+// Faster Fire Rate
+var fasterFireRate = new Circle(10);
+fasterFireRate.setColor(Color.green);
+
+// Graphics
+var background = new WebImage("https://opengameart.org/sites/default/files/backgrounddetailed8.png");
+var midLine = new Line(0, getHeight()/2, getWidth(), getHeight()/2);
+midLine.setLineWidth(5);
+var healthBoostActive = false;
+var speedBoostActive = false;
+var slowDownActive = false;
+var damageBoostActive = false;
+var fireRateActive = false;
+var player1Tag = new Text("Player 1", "20pt Arial");
+player1Tag.setPosition(15, getHeight() - 15);
+var player2Tag = new Text("Player 2", "20pt Arial");
+player2Tag.setPosition(getWidth() - 110, 30);
+
+// End Game Results
+var winText = new Text("Player 2 Wins!", "40pt Arial");
+// Walls
+var p1Wall = new Rectangle(100, 10);
+p1Wall.setPosition(player1.getX(), player1.getY());
+
+function start(){
+    // Adding Graphics
+    remove(winText);
+    add(background);
+    add(startButton);
+    add(startText);
+    mouseMoveMethod(onMouseMove);
+    mouseClickMethod(onMouseClick);
+}
+
+function movement(){
+    player1.move(p1dx, p1dy);
+    player2.move(p2dx, p2dy);
+    p1Shot.move(0, p1shotdy);
+    p2Shot.move(0, p2shotdy);
+    
+    if(leftPressed){
+        p1dx -= p1Speed;
+    }
+    if(rightPressed){
+        p1dx += p1Speed;
+    } 
+    if(upPressed){
+        p1dy -= p1Speed;
+    }
+    if(downPressed){
+        p1dy += p1Speed;
+    }
+    
+    if(aPressed){
+        p2dx -= p2Speed;
+    }
+    if(dPressed){
+        p2dx += p2Speed;
+    } 
+    if(wPressed){
+        p2dy -= p2Speed;
+    }
+    if(sPressed){
+        p2dy += p2Speed;
+    }
+    
+    if(pPressed && !p1Cooldown && !gameOver){
+        p1Shot.setPosition(player1.getX(), player1.getY());
+        add(p1Shot);
+        p1Cooldown = true;
+    }
+    
+    if(spacePressed && !p2Cooldown && !gameOver){
+        p2Shot.setPosition(player2.getX(), player2.getY());
+        add(p2Shot);
+        p2Cooldown = true;
+    }
+    
+    p1dx *= 0.9;
+    p1dy*= 0.9;
+    p2dx *= 0.9;
+    p2dy*= 0.9;    
+    
+    // Player Limits
+    if(player2.getX() > getWidth()){
+        player2.setPosition(getWidth(), player2.getY());
+    }
+    
+    if(player2.getX() < 0){
+        player2.setPosition(0, player2.getY());
+    }
+    
+    if(player2.getY() > getHeight()/2 - 18){
+        player2.setPosition(player2.getX(), getHeight()/2 - 18);
+    }
+    
+    if(player2.getY() < 0){
+        player2.setPosition(player2.getX(), 0);
+    }
+    
+    if(player1.getX() > getWidth()){
+        player1.setPosition(getWidth(), player1.getY());
+    }
+    
+    if(player1.getX() < 0){
+        player1.setPosition(0, player1.getY());
+    }
+    
+    if(player1.getY() > getHeight()){
+        player1.setPosition(player1.getX(), getHeight());
+    }
+    
+    if(player1.getY() < getHeight()/2 + 18){
+        player1.setPosition(player1.getX(), getHeight()/2 + 18);
+    }
+    
+    // Shot Limits
+    if(p1Shot.getY() < 0){
+        remove(p1Shot);
+        p1Cooldown = false;
+    }
+    
+    if(p2Shot.getY() > getHeight()){
+        remove(p2Shot);
+        p2Cooldown = false;
+    }
+    
+    // Check Collisions
+    if (checkCircleCollision(p2Shot,player1)){
+        player1.setColor(Color.red);
+        p1Health -= p2Damage;
+        
+    }
+    else
+        player1.setColor(Color.black);
+        
+    if (checkCircleCollision(p1Shot,player2)){
+        player2.setColor(Color.red);
+        p2Health -= p1Damage;
+        
+    }
+    else
+        player2.setColor(Color.black);
+    
+    // Health Boost Collision
+    if (checkCircleCollision(player1, healthBoost) && healthBoostActive){
+        healthBoostActive = false;
+        remove(healthBoost);
+        p1Health += 15;
+        if(p1Health > 100){
+            p1Health = 100;
+        }
+    }
+    if (checkCircleCollision(player2, healthBoost) && healthBoostActive){
+        healthBoostActive = false;
+        remove(healthBoost);
+        p2Health += 15;
+        if(p2Health > 100){
+            p2Health = 100;
+        }
+    }
+    
+    // Speed Boost Collision
+    if (checkCircleCollision(player1, speedBoost)){
+        p1Speed = 0.75;
+        remove(speedBoost);
+        speedBoostActive = false;
+    }
+    if (checkCircleCollision(player2, speedBoost)){
+        p2Speed = 0.75;
+        remove(speedBoost);
+        speedBoostActive = false;
+    }
+    
+    // Slow Down Collision
+    if (checkCircleCollision(player1, slowDown)){
+        p2Speed = 0.35;
+        remove(slowDown);
+        slowDownActive = false;
+    }
+    if (checkCircleCollision(player2, slowDown)){
+        p1Speed = 0.35
+        remove(slowDown);
+        slowDownActive = false;
+    }    
+    
+    // Damage Boost Collision
+    if (checkCircleCollision(player1, damageBoost)){
+        p1Damage = 4;
+        remove(damageBoost);
+        damageBoostActive = false;
+    }
+    if (checkCircleCollision(player2, damageBoost)){
+        p2Damage = 4;
+        remove(damageBoost);
+        damageBoostActive = false;
+    }    
+    
+    // Faster Fire Rate
+     if (checkCircleCollision(player1, fasterFireRate)){
+        p1shotdy = -30;
+        remove(fasterFireRate);
+        fireRateActive = false;
+    }    
+    if (checkCircleCollision(player2, fasterFireRate)){
+        p2shotdy = 30;
+        remove(fasterFireRate);
+        fireRateActive = false;
+    }    
+    
+    // Health
+    if(p1Health <= 0 || p2Health <= 0){
+        gameOver = true;
+        remove(player1);
+        remove(player2);
+        remove(midLine);
+        remove(p2topLine);
+        remove(p2leftLine);
+        remove(p2rightLine);
+        remove(p2bottomLine);
+        remove(p2HealthBar);
+        remove(p1topLine);
+        remove(p1leftLine);
+        remove(p1rightLine);
+        remove(p1bottomLine);
+        remove(p1HealthBar);
+        remove(healthBoost);
+        remove(speedBoost);
+        remove(damageBoost);
+        remove(slowDown);
+        remove(fasterFireRate);
+        if(p1Health <= 0){
+            winText.setPosition(32, getHeight()/2);
+            add(winText);
+        }
+        else if(p2Health <= 0){
+            winText.setText("Player 1 Wins!");
+            winText.setPosition(32, getHeight()/2);
+            add(winText);
+        }
+    }
+    
+    p2HealthBar.setEndpoint(p2Health + 14, 22);
+    p1HealthBar.setPosition(290,460);
+    p1HealthBar.setEndpoint(p1Health + 290, 460);
+    
+    // PowerUps
+    var random = Randomizer.nextInt(0, 2000);
+    
+    if(random >= 5 && random < 8 && !healthBoostActive){
+        healthBoostActive = true;
+        healthBoost.setPosition(Randomizer.nextInt(0, getWidth()), getHeight()/2);
+        healthBoost.setColor(Color.red);
+        add(healthBoost);
+        println("Added Health Boost");
+    }
+    if(random == 1 && !speedBoostActive){
+        speedBoostActive = true;
+        speedBoost.setPosition(Randomizer.nextInt(0, getWidth()), getHeight()/2);
+        speedBoost.setColor(Color.cyan);
+        add(speedBoost);
+        println("Added Speed Boost");
+    }
+    if(random == 2 && !slowDownActive){
+        slowDownActive = true;
+        slowDown.setPosition(Randomizer.nextInt(0, getWidth()), getHeight()/2);
+        slowDown.setColor(Color.gray);
+        add(slowDown);
+        println("Added Slow Down");
+    }    
+    if(random == 3 && !damageBoostActive){
+        damageBoostActive = true;
+        damageBoost.setPosition(Randomizer.nextInt(0, getWidth()), getHeight()/2);
+        damageBoost.setColor(Color.purple);
+        add(damageBoost);
+        println("Added Damage Boost");
+    }
+    if(random == 4 && !fireRateActive){
+        fireRateActive = true;
+        fasterFireRate.setPosition(Randomizer.nextInt(0, getWidth()), getHeight()/2);
+        fasterFireRate.setColor(Color.green);
+        add(fasterFireRate);
+        println("Added Faster Fire Rate");
+    }   
+    
+
+    
+}
+
+function movementKeysDown(e){
+    if(e.keyCode == Keyboard.LEFT){
+        leftPressed = true;
+    }
+    if(e.keyCode == Keyboard.RIGHT){
+        rightPressed = true;
+    } 
+    if(e.keyCode == Keyboard.UP){
+        upPressed = true;
+    }
+    if(e.keyCode == Keyboard.DOWN){
+        downPressed = true;
+    }
+    if(e.keyCode == Keyboard.letter('P')){
+        pPressed = true;
+    }
+    
+    if(e.keyCode == Keyboard.letter('A')){
+        aPressed = true;
+    }
+    if(e.keyCode == Keyboard.letter('D')){
+        dPressed = true;
+    } 
+    if(e.keyCode == Keyboard.letter('W')){
+        wPressed = true;
+    }
+    if(e.keyCode == Keyboard.letter('S')){
+        sPressed = true;
+    }
+    if(e.keyCode == Keyboard.SPACE){
+        spacePressed = true;
+    }
+}
+
+function movementKeysUp(e){
+    if(e.keyCode == Keyboard.LEFT){
+        leftPressed = false;
+    }
+    if(e.keyCode == Keyboard.RIGHT){
+        rightPressed = false;
+    } 
+    if(e.keyCode == Keyboard.UP){
+        upPressed = false;
+    }
+    if(e.keyCode == Keyboard.DOWN){
+        downPressed = false;
+    }
+    if(e.keyCode == Keyboard.letter('P')){
+        pPressed = false;
+    }
+    
+    if(e.keyCode == Keyboard.letter('A')){
+        aPressed = false;
+    }
+    if(e.keyCode == Keyboard.letter('D')){
+        dPressed = false;
+    } 
+    if(e.keyCode == Keyboard.letter('W')){
+        wPressed = false;
+    }
+    if(e.keyCode == Keyboard.letter('S')){
+        sPressed = false;
+    }
+    if(e.keyCode == Keyboard.SPACE){
+        spacePressed = false;
+    }
+}
+
+function checkCircleCollision (circle1, circle2) {
+    var dx = circle1.x - circle2.x;
+    var dy = circle1.y - circle2.y;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < circle1.radius + circle2.radius) {
+        return true;
+    }
+    return false;
+
+}
+
+function onMouseMove(e){
+    if(((e.getX() >= getWidth()/2 - 50) && (e.getX() <= getWidth()/2 + 50)) && ((e.getY() >= getHeight()/2 - 12) && (e.getY() <= getHeight()/2 + 12))){
+        startButton.setColor(Color.gray);
+        startButton.setRotation(10, 0);
+        startText.setPosition(getWidth()/2 - 30, getHeight()/2 + 4);
+        startText.setRotation(10, 0);
+    }
+    else {
+        startButton.setColor(Color.black);
+        startButton.setRotation(0, 0);
+        startText.setRotation(0, 0);
+        startText.setPosition(getWidth()/2 - 30, getHeight()/2 + 9);
+    }
+}
+
+function onMouseClick(e){
+    if(((e.getX() >= getWidth()/2 - 50) && (e.getX() <= getWidth()/2 + 50)) && ((e.getY() >= getHeight()/2 - 12) && (e.getY() <= getHeight()/2 + 12))){
+        gameStart = true;
+        remove(startButton);
+        remove(startText);
+        if(gameStart){
+            gameSpeed = 120;
+            add(player2Tag);
+            add(player1Tag);
+            add(player1);
+            add(player2);
+            add(midLine);
+            
+            add(p2topLine);
+            add(p2leftLine);
+            add(p2rightLine);
+            add(p2bottomLine);
+            add(p2HealthBar);
+            
+            add(p1topLine);
+            add(p1leftLine);
+            add(p1rightLine);
+            add(p1bottomLine);
+            add(p1HealthBar);
+            
+            
+            setTimer(movement, 1000/gameSpeed);
+            keyDownMethod(movementKeysDown);
+            keyUpMethod(movementKeysUp);
+        }
+    }
+}
+
+
+    if (typeof start === 'function') {
+        start();
+    }
+};
+</script>
+
+</body>
+</html>
